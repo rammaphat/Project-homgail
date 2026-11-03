@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artisan Coffee Machine Recommender | 100-Point MCDM Engine</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans, Playfair Display & Noto Sans Thai -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- SheetJS (xlsx) for parsing external products.xlsx -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Application Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col bg-[#fbf8f5] text-[#1f1510]">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="glass-header sticky top-0 z-30 text-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <!-- Brand & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-700 via-amber-600 to-amber-400 flex items-center justify-center shadow-md border border-amber-300/30">
+          <svg class="w-6 h-6 text-stone-950" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2,21H20V19H2M20,8H18V5H20M20,3H4V13A4,4 0 0,0 8,17H14A4,4 0 0,0 18,13V10H20A2,2 0 0,0 22,8V5C22,3.89 21.1,3 20,3Z" />
+          </svg>
+        </div>
+        <div>
+          <span class="text-xs font-bold uppercase tracking-widest text-amber-400 block leading-none" data-i18n="header_badge">MCDM Decision Engine</span>
+          <h1 class="text-xl sm:text-2xl font-serif font-black coffee-gradient-text tracking-tight" data-i18n="header_title">
+            Coffee Machine Recommender
+          </h1>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+
+        <!-- Language Switcher Toggle -->
+        <button id="lang-toggle-btn" onclick="toggleLanguage()" class="px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-400/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+          <span id="lang-flag" class="text-base">🇹🇭</span>
+          <span id="lang-text">ไทย / EN</span>
+        </button>
+        <button onclick="copyRecommendationSummary()" class="px-3.5 py-2 bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+          <span class="hidden sm:inline" data-i18n="btn_copy_report">Copy Report</span>
+        </button>
+        <button onclick="exportRecommendationJSON()" class="px-3.5 py-2 bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span class="hidden sm:inline" data-i18n="btn_export_json">Export JSON</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- QUICK PRESETS STRIP -->
+  <section class="bg-[#241710] border-b border-amber-900/40 text-stone-200 py-3 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span data-i18n="presets_label">Quick Presets:</span>
+        </span>
+        <span class="text-xs text-stone-400 hidden lg:inline" data-i18n="presets_sub">Instant persona setups with calibrated criteria</span>
+      </div>
+
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+        <button class="preset-chip" data-preset="homeBeginner" data-i18n="preset_home">🌱 Home Beginner (฿15k)</button>
+        <button class="preset-chip active" data-preset="prosumer" data-i18n="preset_prosumer">☕ Prosumer Enthusiast (฿65k)</button>
+        <button class="preset-chip" data-preset="office" data-i18n="preset_office">🏢 Boutique Office (฿95k)</button>
+        <button class="preset-chip" data-preset="cafeSpecialty" data-i18n="preset_cafe">✨ Specialty Cafe (฿220k)</button>
+        <button class="preset-chip" data-preset="commercialHighVolume" data-i18n="preset_comm">⚡ High-Volume Commercial (฿400k)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN APPLICATION CONTENT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- MAIN 2-COLUMN LAYOUT -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- LEFT COLUMN: CRITERIA INPUT PANEL (5 Cols on LG) -->
+      <aside class="lg:col-span-5 space-y-6">
+        <div class="card-coffee p-6 bg-white border border-stone-200 shadow-md">
+          <div class="flex items-center justify-between pb-4 border-b border-stone-100 mb-6">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-800" data-i18n="param_badge">Parameters</span>
+              <h3 class="text-xl font-serif font-bold text-stone-900" data-i18n="param_title">Your Requirements</h3>
+            </div>
+            <button onclick="resetDefaults()" class="text-xs font-semibold text-stone-500 hover:text-amber-800 transition flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span data-i18n="btn_reset">Reset</span>
+            </button>
+          </div>
+
+          <!-- Input 1: Maximum Budget -->
+          <div class="space-y-3 mb-6">
+            <div class="flex items-center justify-between">
+              <label for="input-budget-number" class="text-xs font-bold uppercase tracking-wider text-stone-700" data-i18n="label_budget">
+                1. Maximum Budget (฿)
+              </label>
+              <div class="flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-lg border border-stone-200">
+                <span class="text-xs text-stone-400 font-bold">฿</span>
+                <input id="input-budget-number" type="number" min="4000" max="400000" step="1000" value="45000" class="w-24 text-right text-sm font-bold text-stone-900 bg-transparent outline-none">
+              </div>
+            </div>
+
+            <input id="input-budget-slider" type="range" min="4000" max="400000" step="1000" value="45000" class="w-full">
+
+            <div class="flex justify-between items-center text-[11px] text-stone-400">
+              <span>฿4,000 (Entry)</span>
+              <span>฿45,000 (Sweet Spot)</span>
+              <span>฿400,000 (Flagship)</span>
+            </div>
+
+            <!-- Quick Budget Steppers -->
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              <button class="budget-step-btn px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 rounded-md text-stone-700 transition" data-budget="25000">฿25k</button>
+              <button class="budget-step-btn px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 rounded-md text-stone-700 transition" data-budget="45000">฿45k</button>
+              <button class="budget-step-btn px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 rounded-md text-stone-700 transition" data-budget="100000">฿100k</button>
+              <button class="budget-step-btn px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 rounded-md text-stone-700 transition" data-budget="200000">฿200k</button>
+              <button class="budget-step-btn px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 rounded-md text-stone-700 transition" data-budget="385000">฿385k</button>
+            </div>
+            <p class="text-[11px] text-stone-500 italic" data-i18n="label_budget_note">
+              *Hard Constraint: Products over +15% of this budget are strictly eliminated.
+            </p>
+          </div>
+
+          <!-- Input 2: Daily Cups Demand -->
+          <div class="space-y-3 mb-6 pt-4 border-t border-stone-100">
+            <div class="flex items-center justify-between">
+              <label for="input-cups-number" class="text-xs font-bold uppercase tracking-wider text-stone-700" data-i18n="label_cups">
+                2. Required Daily Cups
+              </label>
+              <div class="flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-lg border border-stone-200">
+                <input id="input-cups-number" type="number" min="5" max="500" value="35" class="w-14 text-right text-sm font-bold text-stone-900 bg-transparent outline-none">
+                <span class="text-xs text-stone-500 font-medium">cups/day</span>
+              </div>
+            </div>
+
+            <input id="input-cups-slider" type="range" min="5" max="500" value="35" class="w-full">
+
+            <div class="flex justify-between items-center text-[11px] text-stone-400">
+              <span>5 cups (Low)</span>
+              <span>35 cups (Default)</span>
+              <span>150+ (Cafe rush)</span>
+              <span>500 max</span>
+            </div>
+            <p class="text-[11px] text-stone-500 italic" data-i18n="label_cups_note">
+              *Hard Constraint: Machines with lower max rated cups are disqualified. Sweet spot is 50-85% machine load.
+            </p>
+          </div>
+
+          <!-- Input 3: Usage Segment -->
+          <div class="space-y-3 mb-6 pt-4 border-t border-stone-100">
+            <label class="text-xs font-bold uppercase tracking-wider text-stone-700 block" data-i18n="label_segment">
+              3. Intended Environment & Usage Segment
+            </label>
+            <div class="grid grid-cols-3 gap-2.5">
+              <div class="segment-card active text-center flex flex-col items-center justify-center" data-segment="Home">
+                <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-800 mb-1 icon-badge">
+                  🏠
+                </div>
+                <span class="text-xs font-bold block" data-i18n="seg_home">Home</span>
+                <span class="text-[10px] text-stone-500 text-muted-custom" data-i18n="seg_home_sub">Personal / Barista</span>
+              </div>
+
+              <div class="segment-card text-center flex flex-col items-center justify-center" data-segment="Office">
+                <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-800 mb-1 icon-badge">
+                  🏢
+                </div>
+                <span class="text-xs font-bold block" data-i18n="seg_office">Office</span>
+                <span class="text-[10px] text-stone-500 text-muted-custom" data-i18n="seg_office_sub">Studio / Team</span>
+              </div>
+
+              <div class="segment-card text-center flex flex-col items-center justify-center" data-segment="Cafe">
+                <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-800 mb-1 icon-badge">
+                  ☕
+                </div>
+                <span class="text-xs font-bold block" data-i18n="seg_cafe">Cafe</span>
+                <span class="text-[10px] text-stone-500 text-muted-custom" data-i18n="seg_cafe_sub">Specialty / Commercial</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input 4: Electrical Power Support -->
+          <div class="space-y-3 mb-6 pt-4 border-t border-stone-100">
+            <label class="text-xs font-bold uppercase tracking-wider text-stone-700 block" data-i18n="label_power">
+              4. Electrical Infrastructure
+            </label>
+            <div class="flex gap-2">
+              <button class="power-toggle-btn active" data-power="Standard">
+                <span class="text-xs font-bold block flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span data-i18n="power_std">Standard Power</span>
+                </span>
+                <span class="text-[11px] text-stone-500 text-muted-custom block mt-0.5" data-i18n="power_std_sub">220V 1-phase (10A–16A standard outlet)</span>
+              </button>
+
+              <button class="power-toggle-btn" data-power="Heavy">
+                <span class="text-xs font-bold block flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                  <span data-i18n="power_hvy">Heavy Duty Power</span>
+                </span>
+                <span class="text-[11px] text-stone-500 text-muted-custom block mt-0.5" data-i18n="power_hvy_sub">3-Phase / 20A+ commercial electrical grid</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-stone-500 italic" data-i18n="power_note">
+              *Hard Constraint: Commercial 'Heavy' machines are eliminated if Standard power is selected.
+            </p>
+          </div>
+
+          <!-- Input 5: Feature Requirements -->
+          <div class="space-y-3 pt-4 border-t border-stone-100">
+            <label class="text-xs font-bold uppercase tracking-wider text-stone-700 block" data-i18n="label_features">
+              5. Specific Feature Match (+15 pts)
+            </label>
+            
+            <div class="space-y-2">
+              <label class="feature-checkbox">
+                <input type="checkbox" id="check-dual-boiler">
+                <div class="flex-1">
+                  <span class="text-xs font-bold text-stone-900 block" data-i18n="check_db">Require Dual Boiler (+7.5 pts)</span>
+                  <span class="text-[11px] text-stone-500 block leading-tight" data-i18n="check_db_sub">Simultaneous espresso brewing & continuous high-pressure milk steaming without temperature wait.</span>
+                </div>
+              </label>
+
+              <label class="feature-checkbox">
+                <input type="checkbox" id="check-direct-water">
+                <div class="flex-1">
+                  <span class="text-xs font-bold text-stone-900 block" data-i18n="check_dw">Require Direct Water Line Plumbing (+7.5 pts)</span>
+                  <span class="text-[11px] text-stone-500 block leading-tight" data-i18n="check_dw_sub">Rotary pump connected directly to mains water filtration supply (no manual tank refilling).</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT COLUMN: RESULTS DASHBOARD (7 Cols on LG) -->
+      <section class="lg:col-span-7 space-y-6">
+
+        <!-- EXCEL ERROR / LOCAL CORS NOTIFICATION BANNER -->
+        <div id="excel-error-banner" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-300 text-stone-800 text-xs shadow-sm">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl flex-shrink-0">📁</span>
+            <div class="flex-1">
+              <h4 class="font-bold text-stone-900 text-sm" id="excel-error-title">Excel File Loading Status</h4>
+              <p class="text-stone-600 mt-1" id="excel-error-msg">
+                If opened directly via local file:// protocol, your browser may restrict auto-fetching local files. Please select the <code>products.xlsx</code> file directly from your folder or serve via localhost.
+              </p>
+              <div class="mt-2.5 flex items-center gap-2">
+                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                  <span>Select products.xlsx</span>
+                  <input type="file" id="excel-file-picker" accept=".xlsx, .xls" class="hidden">
+                </label>
+                <button onclick="loadCatalogFromExcel()" class="px-3 py-1.5 bg-white border border-stone-300 hover:bg-stone-100 text-stone-700 rounded-lg text-xs font-semibold transition">
+                  Retry Auto-Fetch
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- METRICS SUMMARY BAR -->
+        <div class="card-coffee p-4 bg-white border border-stone-200 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+          <div>
+            <span class="text-xs font-semibold text-stone-500 block" data-i18n="metric_top_score">Top Match Score</span>
+            <div id="metric-top-score" class="text-xl font-bold text-emerald-700">--/100</div>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-stone-500 block" data-i18n="metric_eligible">Qualified Models</span>
+            <div id="metric-eligible-count" class="text-xl font-bold text-stone-900">--</div>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-stone-500 block" data-i18n="metric_disqualified">Disqualified Models</span>
+            <div id="metric-disqualified-count" class="text-xl font-bold text-stone-500">--</div>
+          </div>
+          <div>
+            <span class="text-xs font-semibold text-stone-500 block" data-i18n="metric_avg_price">Average Qualified Price</span>
+            <div id="metric-avg-price" class="text-xl font-bold text-stone-800">฿--</div>
+          </div>
+        </div>
+
+        <!-- TOP 3 RECOMMENDED MACHINES (CARDS) -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="text-xs font-bold text-amber-800 uppercase tracking-wider block" data-i18n="top3_badge">MCDM Evaluation Leaders</span>
+              <h3 class="text-xl font-serif font-bold text-stone-900" data-i18n="top3_title">
+                Top 3 Recommended Machines
+              </h3>
+            </div>
+            <span class="text-xs text-stone-500 hidden sm:inline" data-i18n="top3_sub">Evaluated dynamically by MCDM model</span>
+          </div>
+
+          <div id="top-3-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Dynamically populated with Top 3 cards -->
+          </div>
+        </div>
+
+        <!-- FULL CATALOG TABLE & FILTER BAR -->
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-lg font-serif font-bold text-stone-900" data-i18n="catalog_table_title">
+                Full Catalog Ranking
+              </h3>
+              <p class="text-xs text-stone-500" data-i18n="catalog_table_sub">
+                All passing products sorted by Total MCDM Score descending
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              <label for="sort-select" class="font-bold text-stone-700" data-i18n="sort_label">Sort By:</label>
+              <select id="sort-select" class="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 font-semibold focus:outline-none focus:border-amber-600">
+                <option value="score_desc" data-i18n="sort_score">Highest Score (Default)</option>
+                <option value="price_asc" data-i18n="sort_price_asc">Price: Low to High</option>
+                <option value="price_desc" data-i18n="sort_price_desc">Price: High to Low</option>
+                <option value="cups_desc" data-i18n="sort_cups_desc">Capacity: High to Low</option>
+              </select>
+
+              <select id="filter-segment-select" class="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 font-semibold focus:outline-none focus:border-amber-600">
+                <option value="all" data-i18n="filter_all_seg">All Segments</option>
+                <option value="Home" data-i18n="filter_home">Home Only</option>
+                <option value="Office" data-i18n="filter_office">Office Only</option>
+                <option value="Cafe" data-i18n="filter_cafe">Cafe Only</option>
+              </select>
+
+              <select id="filter-brand-select" class="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1.5 text-stone-800 font-semibold focus:outline-none focus:border-amber-600">
+                <option value="all" data-i18n="filter_all_brands">All Brands</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Full Catalog Table -->
+          <div class="card-coffee overflow-hidden border border-stone-200 bg-white">
+            <div class="overflow-x-auto">
+              <table class="catalog-table" id="catalog-table">
+                <thead>
+                  <tr>
+                    <th class="w-12 text-center" data-i18n="th_rank">#</th>
+                    <th data-i18n="th_product">Product & Brand</th>
+                    <th data-i18n="th_segment">Segment</th>
+                    <th data-i18n="th_power">Power</th>
+                    <th data-i18n="th_features">Specs</th>
+                    <th class="text-right" data-i18n="th_price">Price</th>
+                    <th class="text-right" data-i18n="th_capacity">Capacity</th>
+                    <th class="text-center" data-i18n="th_score">Match Rate</th>
+                    <th class="text-center" data-i18n="th_actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="catalog-table-body">
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State for Table -->
+            <div id="no-results-state" class="hidden p-8 text-center text-sm text-stone-500">
+              No matching machines found with your current filter criteria.
+            </div>
+          </div>
+        </div>
+
+        <!-- DISQUALIFIED / HARD CONSTRAINT VIOLATIONS SECTION -->
+        <div class="pt-6 border-t border-stone-200">
+          <details class="group bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm" open>
+            <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-stone-50 select-none">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-stone-800" data-i18n="disq_title">
+                  Disqualified & Incompatible Models
+                </span>
+                <span id="disqualified-header-count" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                  0 Models
+                </span>
+              </div>
+              <div class="text-xs text-stone-500 flex items-center gap-1">
+                <span data-i18n="disq_view_reasons">View Reasons</span>
+                <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </div>
+            </summary>
+
+            <div class="p-4 pt-1 border-t border-stone-100 bg-stone-50/50">
+              <p class="text-xs text-stone-500 mb-3" data-i18n="disq_desc">
+                The following models failed your strict pre-filter constraints (exceeded 115% budget, required heavy 3-phase electricity, or insufficient daily cup capacity). In accordance with the MCDM rules, they receive <strong>0 total points</strong>.
+              </p>
+              <div id="disqualified-list-container" class="space-y-3">
+                <!-- Dynamically populated disqualified items -->
+              </div>
+            </div>
+          </details>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- FLOATING SIDE-BY-SIDE COMPARE DOCK -->
+  <aside id="compare-dock" class="compare-dock" aria-label="Comparison Dock">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-amber-300" data-i18n="compare_dock_title">Compare Models:</span>
+      <span id="compare-count-text" class="text-xs text-stone-300 font-semibold">0 of 3 selected</span>
+    </div>
+
+    <div id="compare-items-preview" class="flex items-center gap-1.5">
+      <!-- Selected machine pill tags -->
+    </div>
+
+    <div class="flex items-center gap-2 pl-2 border-l border-stone-700">
+      <button onclick="openComparisonModal()" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold rounded-full text-xs transition shadow-md" data-i18n="btn_view_compare">
+        View Comparison Matrix
+      </button>
+      <button onclick="clearComparison()" class="p-1.5 text-stone-400 hover:text-white rounded-full transition" title="Clear All">
+        ✕
+      </button>
+    </div>
+  </aside>
+
+  <!-- COMPARISON MODAL -->
+  <div id="comparison-modal" class="modal-overlay">
+    <div class="modal-container" id="comparison-modal-content">
+      <!-- Dynamically filled by openComparisonModal() -->
+    </div>
+  </div>
+
+  <!-- MACHINE DETAIL MODAL -->
+  <div id="detail-modal" class="modal-overlay">
+    <div class="modal-container" id="detail-modal-content">
+      <!-- Dynamically filled by openDetailModal() -->
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="mt-16 bg-[#1a110c] text-stone-400 py-10 border-t border-amber-900/30 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-amber-600/30 flex items-center justify-center text-amber-400 font-bold">
+          ☕
+        </div>
+        <div>
+          <div class="text-stone-200 font-serif font-bold text-sm">Coffee Machine MCDM Recommender</div>
+          <div class="text-stone-500">100-Point Multi-Criteria Decision Framework • 20 Model Evaluation Engine</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 text-stone-400">
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="hover:text-amber-300 transition">Back to Top ↑</button>
+        <span>•</span>
+        <button onclick="window.print()" class="hover:text-amber-300 transition">Print Friendly Report</button>
+        <span>•</span>
+        <button onclick="exportRecommendationJSON()" class="hover:text-amber-300 transition">Download Data JSON</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- App Javascript -->
+  <script src="app.js"></script>
+</body>
+</html>
